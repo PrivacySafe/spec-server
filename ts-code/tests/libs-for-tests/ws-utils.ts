@@ -22,8 +22,7 @@ import { defer } from '../../lib-common/processes';
 import { makeConnectionException } from '../../lib-common/exceptions/http';
 import { globalAgent as agent } from 'https';
 
-export function openSocket(url: string, sessionId: string):
-		Promise<Reply<WebSocket>> {
+export function openSocket(url: string, sessionId: string): Promise<Reply<WebSocket>> {
 	if (!url.startsWith('wss://')) { throw new Error(
 		`Url protocol must be wss`); }
 	const headers: any = {};

@@ -56,8 +56,7 @@ type AuthSenderInvites = configApi.p.authSenderInvites.List;
 type AnonSenderInvites = configApi.p.anonSenderInvites.List;
 
 type MsgMeta = retrievalApi.MsgMeta;
-export type MsgEvents = retrievalApi.msgMainObjRecieved.Event |
-	retrievalApi.msgRecievedCompletely.Event;
+export type MsgEvents = retrievalApi.msgMainObjRecieved.Event | retrievalApi.msgRecievedCompletely.Event;
 
 export type MailEventsSink = (
 	userId: string, channel: string, event: MsgEvents
@@ -117,20 +116,16 @@ export interface InboxParams {
 
 export class Inbox extends UserFiles<InboxParams> {
 
-	private metas = new MsgMetas(
-		5*60*1000, join(this.path, 'delivery'), join(this.path, 'messages'));
+	private readonly metas = new MsgMetas(5*60*1000, join(this.path, 'delivery'), join(this.path, 'messages'));
 
-	private objFiles = new ObjFiles(
-		5*60*1000, this.metas.deliveryFolder, this.metas.readyMsgsFolder);
+	private readonly objFiles = new ObjFiles(5*60*1000, this.metas.deliveryFolder, this.metas.readyMsgsFolder);
 
-	private mailEventsSink: MailEventsSink;
-	
 	constructor(
-		userId: string, path: string, mailEventsSink: MailEventsSink,
+		userId: string, path: string,
+		private mailEventsSink: MailEventsSink,
 		writeBufferSize?: string|number, readBufferSize?: string|number
 	) {
 		super(userId, path, writeBufferSize, readBufferSize);
-		this.mailEventsSink = mailEventsSink;
 		Object.freeze(this);
 	}
 	
@@ -139,9 +134,7 @@ export class Inbox extends UserFiles<InboxParams> {
 		writeBufferSize?: string|number, readBufferSize?: string|number
 	): Promise<Inbox> {
 		const path = join(userFolder, 'mail');
-		const inbox = new Inbox(
-			userId, path, mailEventsSink, writeBufferSize, readBufferSize
-		);
+		const inbox = new Inbox(userId, path, mailEventsSink, writeBufferSize, readBufferSize);
 		await inbox.ensureUserExistsOnDisk();
 		return inbox;
 	}
@@ -285,9 +278,7 @@ export class Inbox extends UserFiles<InboxParams> {
 		this.objFiles.changeToReadingPathsInMsg(msgId);
 		
 		// raise event about completion of receiving a message
-		this.mailEventsSink(this.userId,
-			retrievalApi.msgRecievedCompletely.EVENT_NAME,
-			{ msgId });
+		this.mailEventsSink(this.userId, retrievalApi.msgRecievedCompletely.EVENT_NAME, { msgId });
 	}
 
 	private areAllMsgObjsComplete(

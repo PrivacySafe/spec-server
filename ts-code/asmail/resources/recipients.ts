@@ -317,9 +317,7 @@ export function makeRecipients(
 			}
 		} else {
 			const userFolder = userDataInRootFolder(rootFolder, userId);
-			inbox = await Inbox.make(
-				userFolder, userId, mailEventsSink, writeBufferSize, readBufferSize
-			);
+			inbox = await Inbox.make(userFolder, userId, mailEventsSink, writeBufferSize, readBufferSize);
 			boxes.set(userId, inbox);
 			return inbox;
 		}

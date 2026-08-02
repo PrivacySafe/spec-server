@@ -34,6 +34,7 @@ specs.definition = (setup: () => TestSetup) => (() => {
 	let deliveryUrl: string;
 	let user1: User;
 	let sessionId: string;
+	let session2: string;
 
 	beforeEachAsync(async () => {
 		asmailServer = setup().asmailServer;
@@ -42,6 +43,7 @@ specs.definition = (setup: () => TestSetup) => (() => {
 		deliveryUrl = await asmailServer.getDeliveryUrl();
 		user1 = setup().user1;
 		sessionId = await startSession(user1, retrievalUrl);
+		session2 = await startSession(user1, retrievalUrl);
 	});
 	
 	itAsync(`requires session to open web socket`, async () => {
@@ -53,26 +55,39 @@ specs.definition = (setup: () => TestSetup) => (() => {
 	
 	itAsync(`emits event on completion of message reception`, async () => {
 
-		let rep = await openSocket(wsUrl, sessionId);
-		expect(rep.status).toBe(api.SC.ok);
-		
-		const eventSrc = makeSubscriber(rep.data, undefined);
+		globalThis.logTest = true;
 
-		const eventPromise = (Observable.create(
-			obs => eventSrc.subscribe<msgRecievedCompletely.Event>(
-			msgRecievedCompletely.EVENT_NAME, obs)) as Observable<msgRecievedCompletely.Event>)
-		.take(1)
-		.toPromise();
+		function subscribeAndWaitInSession(rep: Awaited<ReturnType<typeof openSocket>>) {
+			expect(rep.status).toBe(api.SC.ok);
+			
+			const eventSrc = makeSubscriber(rep.data, undefined);
+
+			return (Observable.create(obs => eventSrc.subscribe<msgRecievedCompletely.Event>(
+				msgRecievedCompletely.EVENT_NAME, obs
+			)) as Observable<msgRecievedCompletely.Event>)
+			.take(1)
+			.toPromise();
+		}
+
+		const eventPromises = [
+			subscribeAndWaitInSession(await openSocket(wsUrl, sessionId)),
+			subscribeAndWaitInSession(await openSocket(wsUrl, session2)),
+		];
 		
 		// give some time for subscription to occur
 		await sleep(10);
 		
 		const msgId = await sendMsg(deliveryUrl, user1.id, msg);
 
-		const event = await eventPromise;
-		expect(typeof event).toBe('object');
-		expect(event.msgId).withContext(`message reception completion event should give a respective message id`).toBe(msgId);
+		for (const eventPromise of eventPromises) {
+			const event = await eventPromise;
+			expect(typeof event).toBe('object');
+			expect(event.msgId).withContext(
+				`message reception completion event should give a respective message id`
+			).toBe(msgId);
+		}
 
+		globalThis.logTest = false;
 	});
 
 });
